@@ -1,26 +1,102 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #090d16;
+    --foreground: #f1f5f9;
+    --card: #0f172a;
+    --card-foreground: #f8fafc;
+    --border: #1e293b;
+    --accent-emerald: #10b981;
+    --accent-crimson: #ef4444;
+    --accent-cyan: #06b6d4;
+    --accent-amber: #f59e0b;
   }
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: #080c14;
+  color: #f1f5f9;
+  font-family: var(--font-outfit), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  overflow-x: hidden;
+  background-image: 
+    radial-gradient(at 10% 10%, rgba(16, 185, 129, 0.05) 0px, transparent 40%),
+    radial-gradient(at 90% 10%, rgba(6, 182, 212, 0.05) 0px, transparent 40%),
+    radial-gradient(at 50% 90%, rgba(239, 68, 68, 0.04) 0px, transparent 50%);
+  background-attachment: fixed;
+}
+
+.font-bangla {
+  font-family: var(--font-hind-siliguri), -apple-system, sans-serif;
+}
+
+/* Glassmorphism styling */
+.glass-panel {
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-card {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.6) 0%, rgba(15, 23, 42, 0.75) 100%);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+}
+
+.glass-card-hover {
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.glass-card-hover:hover {
+  transform: translateY(-3px);
+  border-color: rgba(16, 185, 129, 0.35);
+  box-shadow: 0 14px 35px -8px rgba(16, 185, 129, 0.15), 0 0 20px rgba(16, 185, 129, 0.1);
+}
+
+/* Live Badge Glow */
+@keyframes live-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+  }
+}
+
+.animate-live-pulse {
+  animation: live-pulse 2s infinite cubic-bezier(0.66, 0, 0, 1);
+}
+
+/* Pitch Grass Pattern */
+.bg-pitch {
+  background-color: #0b2b18;
+  background-image: 
+    repeating-linear-gradient(
+      0deg,
+      rgba(13, 56, 31, 0.7),
+      rgba(13, 56, 31, 0.7) 36px,
+      rgba(10, 44, 25, 0.7) 36px,
+      rgba(10, 44, 25, 0.7) 72px
+    );
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+::-webkit-scrollbar-track {
+  background: #090d16;
+}
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #334155;
 }
