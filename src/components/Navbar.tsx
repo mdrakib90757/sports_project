@@ -16,6 +16,7 @@ import {
   GitBranch,
   Sparkles,
   UserPlus,
+  Crown,
 } from 'lucide-react';
 import { useLanguage } from './LanguageContext';
 import { useTournamentStore } from '@/lib/data/tournamentStore';
@@ -53,6 +54,7 @@ export function Navbar() {
     { href: '/stats', label: t.nav.topScorers, icon: Award },
     { href: '/bracket', label: t.nav.bracket, icon: GitBranch },
     { href: '/draw', label: (t.nav as any).draw || (language === 'bn' ? 'লটারি ড্র' : 'Lottery Draw'), icon: Sparkles, highlight: true },
+    { href: '/presentation', label: language === 'bn' ? 'উদ্বোধনী শো' : 'VIP Show', icon: Crown, isCeremony: true },
     { href: '/register', label: language === 'bn' ? 'রেজিস্ট্রেশন' : 'Register', icon: UserPlus },
   ];
 
@@ -88,21 +90,27 @@ export function Navbar() {
             {navLinks.map((link) => {
               const isActive = pathname === link.href;
               const isHighlight = (link as any).highlight;
+              const isCeremony = (link as any).isCeremony;
               return (
                 <Link
                   key={link.href}
                   href={link.href}
                   className={`h-9 px-3 rounded-lg text-sm font-semibold inline-flex items-center gap-1.5 transition-all duration-150 ${
                     isActive
-                      ? isHighlight
+                      ? isCeremony
+                        ? 'text-amber-400 bg-amber-500/15 border border-amber-500/35 shadow-sm shadow-amber-500/10'
+                        : isHighlight
                         ? 'text-lime-400 bg-lime-400/15 border border-lime-400/35 shadow-sm shadow-lime-400/10'
                         : 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 shadow-sm shadow-emerald-500/10'
+                      : isCeremony
+                      ? 'text-amber-400/90 hover:text-amber-300 hover:bg-amber-400/10 border border-amber-400/20'
                       : isHighlight
                       ? 'text-lime-400/90 hover:text-lime-300 hover:bg-lime-400/10 border border-lime-400/20'
                       : 'text-slate-300 hover:text-white hover:bg-slate-800/60 border border-transparent'
                   }`}
                 >
                   {isHighlight && <Sparkles className="w-3.5 h-3.5 text-lime-400 animate-pulse" />}
+                  {isCeremony && <Crown className="w-3.5 h-3.5 text-amber-400" />}
                   <span suppressHydrationWarning>{link.label}</span>
                 </Link>
               );
@@ -174,25 +182,35 @@ export function Navbar() {
             const isActive = pathname === link.href;
             const Icon = link.icon;
             const isHighlight = (link as any).highlight;
+            const isCeremony = (link as any).isCeremony;
             return (
               <Link
                 key={link.href}
                 href={link.href}
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-colors ${
                   isActive
-                    ? isHighlight
+                    ? isCeremony
+                      ? 'text-amber-400 bg-amber-500/15 border border-amber-500/30'
+                      : isHighlight
                       ? 'text-lime-400 bg-lime-400/15 border border-lime-400/30'
                       : 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/20'
+                    : isCeremony
+                    ? 'text-amber-400 hover:text-white bg-amber-400/5 hover:bg-amber-400/10 border border-amber-400/20'
                     : isHighlight
                     ? 'text-lime-400/90 hover:text-white bg-lime-400/5 hover:bg-lime-400/10 border border-lime-400/20'
                     : 'text-slate-300 hover:text-white hover:bg-slate-900'
                 }`}
               >
-                <Icon className={`w-4 h-4 ${isActive ? (isHighlight ? 'text-lime-400' : 'text-emerald-400') : isHighlight ? 'text-lime-400' : 'text-slate-400'}`} />
+                <Icon className={`w-4 h-4 ${isActive ? (isCeremony ? 'text-amber-400' : isHighlight ? 'text-lime-400' : 'text-emerald-400') : isCeremony ? 'text-amber-400' : isHighlight ? 'text-lime-400' : 'text-slate-400'}`} />
                 <span suppressHydrationWarning>{link.label}</span>
                 {isHighlight && (
                   <span className="ml-auto text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-lime-400/20 text-lime-400 border border-lime-400/30">
                     LIVE
+                  </span>
+                )}
+                {isCeremony && (
+                  <span className="ml-auto text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                    SHOW
                   </span>
                 )}
               </Link>

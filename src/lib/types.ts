@@ -149,3 +149,28 @@ export interface TopScorerRow {
   penalties: number;
   matches: number;
 }
+
+export type DignitaryCategory = 'league' | 'tournament' | 'team' | 'committee';
+
+export interface Dignitary {
+  id: string;
+  category: DignitaryCategory;
+  name: string;
+  name_bn: string;
+  role: string;
+  role_bn: string;
+  badge: string;
+  badge_bn: string;
+  photo_url: string;
+  team_id?: string;
+  team_name?: string;
+  team_name_bn?: string;
+  team_logo_url?: string;
+  team_color?: string;
+  speech_bn: string;
+  speech_en: string;
+  message_bn: string;
+  message_en: string;
+  highlights_bn: string[];
+  highlights_en: string[];
+}

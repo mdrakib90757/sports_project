@@ -26,6 +26,7 @@ import {
   UserPlus,
   X,
   ExternalLink,
+  Crown,
 } from 'lucide-react';
 import { useLanguage } from '@/components/LanguageContext';
 import { useTournamentStore } from '@/lib/data/tournamentStore';
@@ -345,13 +346,23 @@ export default function AdminPage() {
           </button>
         </div>
 
-        <Link
-          href="/draw"
-          className="h-9 px-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-lime-400 text-xs font-bold flex items-center gap-1.5 border border-slate-700 transition-colors"
-        >
-          <Sparkles className="w-3.5 h-3.5" />
-          <span>{language === 'bn' ? 'লাইভ ড্র সেন্টার' : 'Live Draw Center'}</span>
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/presentation"
+            className="h-9 px-3.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 text-xs font-bold flex items-center gap-1.5 border border-amber-500/30 transition-colors shadow-sm"
+          >
+            <Crown className="w-3.5 h-3.5 text-amber-400" />
+            <span>{language === 'bn' ? 'উদ্বোধনী ভিআইপি শো' : 'Launch VIP Show'}</span>
+          </Link>
+
+          <Link
+            href="/draw"
+            className="h-9 px-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-lime-400 text-xs font-bold flex items-center gap-1.5 border border-slate-700 transition-colors"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>{language === 'bn' ? 'লাইভ ড্র সেন্টার' : 'Live Draw Center'}</span>
+          </Link>
+        </div>
       </div>
 
       {/* TAB 1: MATCHES CONSOLE */}

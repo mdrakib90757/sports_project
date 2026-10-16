@@ -14,6 +14,7 @@ import {
   Shield,
   Activity,
   Zap,
+  Crown,
 } from 'lucide-react';
 import { useLanguage } from '@/components/LanguageContext';
 import { useTournamentStore } from '@/lib/data/tournamentStore';
@@ -23,7 +24,7 @@ import { StandingsTable } from '@/components/StandingsTable';
 import { computeTopScorers } from '@/lib/data/statsUtils';
 
 export default function HomePage() {
-  const { t, getLocalizedText, formatNumber } = useLanguage();
+  const { language, t, getLocalizedText, formatNumber } = useLanguage();
   const { tournament, matches, players, teams, events } = useTournamentStore();
 
   // Find live matches
@@ -99,6 +100,14 @@ export default function HomePage() {
                   <ArrowRight className="w-4 h-4" />
                 </Link>
               )}
+
+              <Link
+                href="/presentation"
+                className="px-5 py-3.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 font-bold text-sm border border-amber-500/35 flex items-center gap-2 transition transform hover:-translate-y-0.5 shadow-sm shadow-amber-500/10"
+              >
+                <Crown className="w-4 h-4 text-amber-400" />
+                <span>{language === 'bn' ? 'উদ্বোধনী শো' : 'Ceremony Show'}</span>
+              </Link>
 
               <Link
                 href="/standings"
