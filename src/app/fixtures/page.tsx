@@ -6,6 +6,8 @@ import { useLanguage } from '@/components/LanguageContext';
 import { useTournamentStore } from '@/lib/data/tournamentStore';
 import { MatchCard } from '@/components/MatchCard';
 import { Match } from '@/lib/types';
+import { Select } from '@/shared/ui/Select';
+import { EmptyState } from '@/shared/ui/StateFeedback';
 
 export default function FixturesPage() {
   const { t, getLocalizedText, formatNumber } = useLanguage();
@@ -130,31 +132,34 @@ export default function FixturesPage() {
           </button>
         </div>
 
-        {/* Team Dropdown Filter */}
-        <div className="flex items-center gap-2">
-          <Filter className="w-4 h-4 text-slate-400 flex-shrink-0" />
-          <select
+        {/* Custom Team Dropdown Filter */}
+        <div className="w-full sm:w-64">
+          <Select
             value={selectedTeamId}
-            onChange={(e) => setSelectedTeamId(e.target.value)}
-            className="w-full sm:w-auto px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs font-bold text-slate-200 focus:outline-none focus:border-emerald-500"
-          >
-            <option value="all">{t.fixtures.allTeams}</option>
-            {teams.map((t) => (
-              <option key={t.id} value={t.id}>
-                {getLocalizedText(t.name, t.name_bn)}
-              </option>
-            ))}
-          </select>
+            onChange={(val) => setSelectedTeamId(val)}
+            placeholder={t.fixtures.allTeams}
+            options={[
+              { value: 'all', label: t.fixtures.allTeams },
+              ...teams.map((team) => ({
+                value: team.id,
+                label: team.name,
+                labelBn: team.name_bn,
+                avatarUrl: team.logo_url,
+              })),
+            ]}
+          />
         </div>
       </div>
 
       {/* MATCHES GROUPED BY DATE */}
       {Object.keys(groupedMatches).length === 0 ? (
-        <div className="rounded-2xl glass-card p-12 text-center space-y-3">
-          <Calendar className="w-10 h-10 text-slate-600 mx-auto" />
-          <h3 className="text-lg font-bold text-white">No Matches Found</h3>
-          <p className="text-sm text-slate-400">{t.fixtures.noMatchesFound}</p>
-        </div>
+        <EmptyState
+          title="No Matches Found"
+          titleBn="কোনো ম্যাচ পাওয়া যায়নি"
+          message={t.fixtures.noMatchesFound}
+          messageBn="বর্তমান ফিল্টারে কোনো ম্যাচ উপলব্ধ নেই।"
+          isBangla={true}
+        />
       ) : (
         <div className="space-y-8">
           {Object.entries(groupedMatches).map(([dateKey, matchList]) => (

@@ -14,6 +14,8 @@ import {
   Users,
   Award,
   GitBranch,
+  Sparkles,
+  UserPlus,
 } from 'lucide-react';
 import { useLanguage } from './LanguageContext';
 import { useTournamentStore } from '@/lib/data/tournamentStore';
@@ -50,6 +52,8 @@ export function Navbar() {
     { href: '/teams', label: t.nav.teams, icon: Users },
     { href: '/stats', label: t.nav.topScorers, icon: Award },
     { href: '/bracket', label: t.nav.bracket, icon: GitBranch },
+    { href: '/draw', label: (t.nav as any).draw || (language === 'bn' ? 'লটারি ড্র' : 'Lottery Draw'), icon: Sparkles, highlight: true },
+    { href: '/register', label: language === 'bn' ? 'রেজিস্ট্রেশন' : 'Register', icon: UserPlus },
   ];
 
   return (
@@ -63,17 +67,17 @@ export function Navbar() {
             </div>
             <div className="flex flex-col">
               <div className="flex items-center gap-2">
-                <span className="text-base sm:text-lg font-black tracking-tight text-white group-hover:text-emerald-400 transition-colors">
+                <span suppressHydrationWarning className="text-base sm:text-lg font-black tracking-tight text-white group-hover:text-emerald-400 transition-colors">
                   {getLocalizedText(tournament.name, tournament.name_bn)}
                 </span>
                 {liveMatchesCount > 0 && (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-500/20 text-red-400 border border-red-500/30">
                     <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                    <span>{formatNumber(liveMatchesCount)} {t.nav.liveNow}</span>
+                    <span suppressHydrationWarning>{formatNumber(liveMatchesCount)} {t.nav.liveNow}</span>
                   </span>
                 )}
               </div>
-              <span className="text-[10px] text-slate-400 hidden sm:block tracking-wide">
+              <span suppressHydrationWarning className="text-[10px] text-slate-400 hidden sm:block tracking-wide">
                 {tournament.season} • {t.tournament.officialSite}
               </span>
             </div>
@@ -83,17 +87,23 @@ export function Navbar() {
           <nav className="hidden lg:flex items-center gap-1.5">
             {navLinks.map((link) => {
               const isActive = pathname === link.href;
+              const isHighlight = (link as any).highlight;
               return (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`h-9 px-3.5 rounded-lg text-sm font-semibold inline-flex items-center transition-all duration-150 ${
+                  className={`h-9 px-3 rounded-lg text-sm font-semibold inline-flex items-center gap-1.5 transition-all duration-150 ${
                     isActive
-                      ? 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 shadow-sm shadow-emerald-500/10'
+                      ? isHighlight
+                        ? 'text-lime-400 bg-lime-400/15 border border-lime-400/35 shadow-sm shadow-lime-400/10'
+                        : 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 shadow-sm shadow-emerald-500/10'
+                      : isHighlight
+                      ? 'text-lime-400/90 hover:text-lime-300 hover:bg-lime-400/10 border border-lime-400/20'
                       : 'text-slate-300 hover:text-white hover:bg-slate-800/60 border border-transparent'
                   }`}
                 >
-                  {link.label}
+                  {isHighlight && <Sparkles className="w-3.5 h-3.5 text-lime-400 animate-pulse" />}
+                  <span suppressHydrationWarning>{link.label}</span>
                 </Link>
               );
             })}
@@ -108,7 +118,7 @@ export function Navbar() {
               }`}
             >
               <Shield className="w-3.5 h-3.5 text-amber-400" />
-              <span>{t.nav.admin}</span>
+              <span suppressHydrationWarning>{t.nav.admin}</span>
               {mounted && isAdmin && (
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
               )}
@@ -118,11 +128,12 @@ export function Navbar() {
           {/* Right Action Area */}
           <div className="flex items-center gap-2 sm:gap-3">
             {/* Language Switcher */}
-            <div className="flex items-center bg-slate-900 border border-slate-800 rounded-lg p-0.5 shadow-inner">
+            <div suppressHydrationWarning className="flex items-center bg-slate-900 border border-slate-800 rounded-lg p-0.5 shadow-inner">
               <button
+                suppressHydrationWarning
                 onClick={() => setLanguage('en')}
                 className={`h-7 px-2.5 text-xs font-bold rounded transition-all ${
-                  language === 'en'
+                  (mounted ? language : 'bn') === 'en'
                     ? 'bg-emerald-500 text-slate-950 shadow-sm'
                     : 'text-slate-400 hover:text-white'
                 }`}
@@ -131,9 +142,10 @@ export function Navbar() {
                 EN
               </button>
               <button
+                suppressHydrationWarning
                 onClick={() => setLanguage('bn')}
                 className={`h-7 px-2.5 text-xs font-bold rounded transition-all font-bangla ${
-                  language === 'bn'
+                  (mounted ? language : 'bn') === 'bn'
                     ? 'bg-emerald-500 text-slate-950 shadow-sm'
                     : 'text-slate-400 hover:text-white'
                 }`}
@@ -161,18 +173,28 @@ export function Navbar() {
           {navLinks.map((link) => {
             const isActive = pathname === link.href;
             const Icon = link.icon;
+            const isHighlight = (link as any).highlight;
             return (
               <Link
                 key={link.href}
                 href={link.href}
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-colors ${
                   isActive
-                    ? 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/20'
+                    ? isHighlight
+                      ? 'text-lime-400 bg-lime-400/15 border border-lime-400/30'
+                      : 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/20'
+                    : isHighlight
+                    ? 'text-lime-400/90 hover:text-white bg-lime-400/5 hover:bg-lime-400/10 border border-lime-400/20'
                     : 'text-slate-300 hover:text-white hover:bg-slate-900'
                 }`}
               >
-                <Icon className={`w-4 h-4 ${isActive ? 'text-emerald-400' : 'text-slate-400'}`} />
-                <span>{link.label}</span>
+                <Icon className={`w-4 h-4 ${isActive ? (isHighlight ? 'text-lime-400' : 'text-emerald-400') : isHighlight ? 'text-lime-400' : 'text-slate-400'}`} />
+                <span suppressHydrationWarning>{link.label}</span>
+                {isHighlight && (
+                  <span className="ml-auto text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-lime-400/20 text-lime-400 border border-lime-400/30">
+                    LIVE
+                  </span>
+                )}
               </Link>
             );
           })}
@@ -188,7 +210,7 @@ export function Navbar() {
             >
               <div className="flex items-center gap-3">
                 <Shield className="w-4 h-4 text-amber-400" />
-                <span>{t.nav.admin}</span>
+                <span suppressHydrationWarning>{t.nav.admin}</span>
               </div>
               {mounted && isAdmin && (
                 <span className="text-[10px] bg-amber-500 text-slate-950 px-2 py-0.5 rounded font-bold">

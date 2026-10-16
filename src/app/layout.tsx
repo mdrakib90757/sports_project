@@ -4,9 +4,12 @@ import { outfit, hindSiliguri } from './fonts';
 import './globals.css';
 import { LanguageProvider } from '@/components/LanguageContext';
 import { TournamentStoreProvider } from '@/lib/data/tournamentStore';
+import { QueryProvider } from './QueryProvider';
+import { ProgressBar } from '@/shared/ui/ProgressBar';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { LiveGoalPopup } from '@/components/LiveGoalPopup';
+import { MatchCardSkeleton } from '@/shared/ui/Skeleton';
 
 export const metadata: Metadata = {
   title: 'কচনাপুর প্রিমিয়ার লিগ সিজন ৩ | Kochnapur Premier League Season 3',
@@ -34,24 +37,43 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+      lang="bn"
       className={`${outfit.variable} ${hindSiliguri.variable} dark antialiased h-full`}
+      suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col bg-[#080c14] text-slate-100 selection:bg-emerald-500 selection:text-slate-950">
-        <LanguageProvider>
-          <TournamentStoreProvider>
-            <LiveGoalPopup />
-            <Suspense fallback={<div className="h-16 sm:h-20 bg-slate-950/80" />}>
-              <Navbar />
-            </Suspense>
-            <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-              <Suspense fallback={<div className="py-20 text-center text-slate-400">Loading tournament center...</div>}>
-                {children}
+      <body
+        className="min-h-full flex flex-col bg-[#080c14] text-slate-100 selection:bg-emerald-500 selection:text-slate-950"
+        suppressHydrationWarning
+      >
+        <QueryProvider>
+          <LanguageProvider>
+            <TournamentStoreProvider>
+              <Suspense fallback={null}>
+                <ProgressBar />
               </Suspense>
-            </main>
-            <Footer />
-          </TournamentStoreProvider>
-        </LanguageProvider>
+              <LiveGoalPopup />
+              <Suspense fallback={<div className="h-16 sm:h-20 bg-slate-950/80" />}>
+                <Navbar />
+              </Suspense>
+              <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+                <Suspense
+                  fallback={
+                    <div className="space-y-6 animate-pulse">
+                      <div className="h-48 rounded-3xl bg-slate-900/60 border border-slate-800" />
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <MatchCardSkeleton />
+                        <MatchCardSkeleton />
+                      </div>
+                    </div>
+                  }
+                >
+                  {children}
+                </Suspense>
+              </main>
+              <Footer />
+            </TournamentStoreProvider>
+          </LanguageProvider>
+        </QueryProvider>
       </body>
     </html>
   );

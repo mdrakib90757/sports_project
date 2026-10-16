@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import {
   Shield,
   Radio,
@@ -20,14 +21,20 @@ import {
   ArrowRightLeft,
   Clock,
   Sparkles,
+  Search,
+  Filter,
+  UserPlus,
+  X,
+  ExternalLink,
 } from 'lucide-react';
 import { useLanguage } from '@/components/LanguageContext';
 import { useTournamentStore } from '@/lib/data/tournamentStore';
 import { isSupabaseConfigured } from '@/lib/supabase/client';
-import { MatchStatus, EventType } from '@/lib/types';
+import { MatchStatus, EventType, PlayerLevel, PlayerPosition } from '@/lib/types';
+import { Select } from '@/shared/ui/Select';
 
 export default function AdminPage() {
-  const { t, getLocalizedText, formatNumber } = useLanguage();
+  const { language, t, getLocalizedText, formatNumber } = useLanguage();
   const {
     matches,
     teams,
@@ -42,7 +49,22 @@ export default function AdminPage() {
     addMatchEvent,
     deleteMatchEvent,
     isRealtimeConnected,
+    updatePlayerLevel,
+    addPlayer,
   } = useTournamentStore();
+
+  const [adminTab, setAdminTab] = useState<'matches' | 'players'>('matches');
+  const [playerSearch, setPlayerSearch] = useState('');
+  const [playerLevelFilter, setPlayerLevelFilter] = useState<'ALL' | PlayerLevel | 'UNASSIGNED'>('ALL');
+  const [showAddPlayerModal, setShowAddPlayerModal] = useState(false);
+
+  // New Player Form State
+  const [newPlayerName, setNewPlayerName] = useState('');
+  const [newPlayerNameBn, setNewPlayerNameBn] = useState('');
+  const [newPlayerPhone, setNewPlayerPhone] = useState('');
+  const [newPlayerPosition, setNewPlayerPosition] = useState<PlayerPosition>('FWD');
+  const [newPlayerLevel, setNewPlayerLevel] = useState<PlayerLevel>('A');
+  const [newPlayerPhoto, setNewPlayerPhoto] = useState('');
 
   // Login form state
   const [emailInput, setEmailInput] = useState('admin@kochnapur.live');
@@ -292,23 +314,66 @@ export default function AdminPage() {
         </div>
       </div>
 
-      {/* MATCH SELECTOR BAR */}
-      <div className="p-4 rounded-2xl glass-card space-y-2">
+      {/* ADMIN MODULE TAB SWITCHER */}
+      <div className="flex flex-wrap items-center justify-between gap-3 p-2 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-xl">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setAdminTab('matches')}
+            className={`h-10 px-4 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all ${
+              adminTab === 'matches'
+                ? 'bg-amber-400 text-slate-950 shadow-md shadow-amber-400/20'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <Radio className="w-4 h-4" />
+            <span>{language === 'bn' ? 'ম্যাচ কন্ট্রোল রুম' : 'Live Match Control'}</span>
+          </button>
+
+          <button
+            onClick={() => setAdminTab('players')}
+            className={`h-10 px-4 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all ${
+              adminTab === 'players'
+                ? 'bg-lime-400 text-slate-950 shadow-md shadow-lime-400/20'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <Users className="w-4 h-4" />
+            <span>{language === 'bn' ? 'খেলোয়াড় ও লেভেল নির্ধারণ' : 'Players & Leveling'}</span>
+            <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-slate-950/30 text-current">
+              {formatNumber(players.length)}
+            </span>
+          </button>
+        </div>
+
+        <Link
+          href="/draw"
+          className="h-9 px-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-lime-400 text-xs font-bold flex items-center gap-1.5 border border-slate-700 transition-colors"
+        >
+          <Sparkles className="w-3.5 h-3.5" />
+          <span>{language === 'bn' ? 'লাইভ ড্র সেন্টার' : 'Live Draw Center'}</span>
+        </Link>
+      </div>
+
+      {/* TAB 1: MATCHES CONSOLE */}
+      {adminTab === 'matches' && (
+        <>
+          {/* MATCH SELECTOR BAR */}
+          <div className="p-4 rounded-2xl glass-card space-y-2">
         <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
           {t.admin.selectMatch}
         </label>
-        <select
+        <Select
           value={selectedMatchId}
-          onChange={(e) => handleSelectMatch(e.target.value)}
-          className="w-full px-4 py-3 rounded-xl bg-slate-900 border border-slate-700 text-sm font-bold text-white focus:outline-none focus:border-emerald-400"
-        >
-          {matches.map((m) => (
-            <option key={m.id} value={m.id}>
-              [{m.status.toUpperCase()}] {m.home_team?.name} vs {m.away_team?.name} — (
-              {m.home_score} - {m.away_score}) • {m.round}
-            </option>
-          ))}
-        </select>
+          onChange={(val) => handleSelectMatch(val)}
+          placeholder={t.admin.selectMatch}
+          options={matches.map((m) => ({
+            value: m.id,
+            label: `${m.home_team?.name || 'Home'} vs ${m.away_team?.name || 'Away'} (${m.home_score} - ${m.away_score})`,
+            labelBn: `${m.home_team?.name_bn || ''} বনাম ${m.away_team?.name_bn || ''}`,
+            badge: m.status.toUpperCase(),
+            avatarUrl: m.home_team?.logo_url,
+          }))}
+        />
       </div>
 
       {/* MAIN TWO-COLUMN ADMIN CONSOLE */}
@@ -327,25 +392,29 @@ export default function AdminPage() {
             </div>
 
             {/* Score Adjuster Grid */}
-            <div className="grid grid-cols-2 gap-6 items-center">
+            <div className="grid grid-cols-2 gap-4 sm:gap-6 items-center">
               {/* Home Score */}
               <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 text-center space-y-3">
                 <span className="text-xs font-bold text-slate-300 truncate block">
                   {getLocalizedText(home.name, home.name_bn)}
                 </span>
-                <div className="flex items-center justify-center gap-3">
+                <div className="flex items-center justify-center gap-2 sm:gap-3">
                   <button
+                    type="button"
                     onClick={() => setHomeScore(Math.max(0, homeScore - 1))}
-                    className="w-8 h-8 rounded-lg bg-slate-800 text-white font-bold hover:bg-slate-700 transition"
+                    className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-slate-800 text-white font-black text-lg hover:bg-slate-700 active:scale-95 transition flex items-center justify-center shadow-sm"
+                    aria-label="Decrease home score"
                   >
                     -
                   </button>
-                  <span className="text-4xl font-black font-mono text-emerald-400 w-12">
+                  <span className="text-3xl sm:text-4xl font-black font-mono text-emerald-400 w-12 text-center">
                     {formatNumber(homeScore)}
                   </span>
                   <button
+                    type="button"
                     onClick={() => setHomeScore(homeScore + 1)}
-                    className="w-8 h-8 rounded-lg bg-slate-800 text-white font-bold hover:bg-slate-700 transition"
+                    className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-slate-800 text-white font-black text-lg hover:bg-slate-700 active:scale-95 transition flex items-center justify-center shadow-sm"
+                    aria-label="Increase home score"
                   >
                     +
                   </button>
@@ -357,19 +426,23 @@ export default function AdminPage() {
                 <span className="text-xs font-bold text-slate-300 truncate block">
                   {getLocalizedText(away.name, away.name_bn)}
                 </span>
-                <div className="flex items-center justify-center gap-3">
+                <div className="flex items-center justify-center gap-2 sm:gap-3">
                   <button
+                    type="button"
                     onClick={() => setAwayScore(Math.max(0, awayScore - 1))}
-                    className="w-8 h-8 rounded-lg bg-slate-800 text-white font-bold hover:bg-slate-700 transition"
+                    className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-slate-800 text-white font-black text-lg hover:bg-slate-700 active:scale-95 transition flex items-center justify-center shadow-sm"
+                    aria-label="Decrease away score"
                   >
                     -
                   </button>
-                  <span className="text-4xl font-black font-mono text-emerald-400 w-12">
+                  <span className="text-3xl sm:text-4xl font-black font-mono text-emerald-400 w-12 text-center">
                     {formatNumber(awayScore)}
                   </span>
                   <button
+                    type="button"
                     onClick={() => setAwayScore(awayScore + 1)}
-                    className="w-8 h-8 rounded-lg bg-slate-800 text-white font-bold hover:bg-slate-700 transition"
+                    className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-slate-800 text-white font-black text-lg hover:bg-slate-700 active:scale-95 transition flex items-center justify-center shadow-sm"
+                    aria-label="Increase away score"
                   >
                     +
                   </button>
@@ -383,20 +456,21 @@ export default function AdminPage() {
                 <label className="text-xs font-semibold text-slate-400">
                   {t.admin.matchStatus}
                 </label>
-                <select
+                <Select
                   value={matchStatus}
-                  onChange={(e) => setMatchStatus(e.target.value as MatchStatus)}
-                  className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs font-bold text-white focus:outline-none focus:border-emerald-400"
-                >
-                  <option value="upcoming">Upcoming</option>
-                  <option value="live_first_half">1st Half (Live)</option>
-                  <option value="half_time">Half Time</option>
-                  <option value="live_second_half">2nd Half (Live)</option>
-                  <option value="extra_time">Extra Time</option>
-                  <option value="penalties">Penalties</option>
-                  <option value="full_time">Full Time (Completed)</option>
-                  <option value="postponed">Postponed</option>
-                </select>
+                  onChange={(val) => setMatchStatus(val as MatchStatus)}
+                  placeholder="Select Status"
+                  options={[
+                    { value: 'upcoming', label: 'Upcoming', badge: 'WAITING' },
+                    { value: 'live_first_half', label: '1st Half (Live)', badge: 'LIVE' },
+                    { value: 'half_time', label: 'Half Time', badge: 'HT' },
+                    { value: 'live_second_half', label: '2nd Half (Live)', badge: 'LIVE' },
+                    { value: 'extra_time', label: 'Extra Time', badge: 'ET' },
+                    { value: 'penalties', label: 'Penalties', badge: 'PEN' },
+                    { value: 'full_time', label: 'Full Time (Completed)', badge: 'FT' },
+                    { value: 'postponed', label: 'Postponed', badge: 'POSTP' },
+                  ]}
+                />
               </div>
 
               <div className="space-y-1">
@@ -458,36 +532,44 @@ export default function AdminPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <label className="text-xs font-semibold text-slate-400">Team</label>
-                    <select
+                    <Select
                       value={eventTeamId}
-                      onChange={(e) => {
-                        setEventTeamId(e.target.value);
+                      onChange={(val) => {
+                        setEventTeamId(val);
                         setEventPlayerId('');
                         setAssistPlayerId('');
                       }}
-                      className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs font-bold text-white focus:outline-none focus:border-emerald-400"
-                    >
-                      <option value={home.id}>{getLocalizedText(home.name, home.name_bn)} (Home)</option>
-                      <option value={away.id}>{getLocalizedText(away.name, away.name_bn)} (Away)</option>
-                    </select>
+                      options={[
+                        {
+                          value: home.id,
+                          label: `${getLocalizedText(home.name, home.name_bn)} (Home)`,
+                          avatarUrl: home.logo_url,
+                        },
+                        {
+                          value: away.id,
+                          label: `${getLocalizedText(away.name, away.name_bn)} (Away)`,
+                          avatarUrl: away.logo_url,
+                        },
+                      ]}
+                    />
                   </div>
 
                   <div className="space-y-1">
                     <label className="text-xs font-semibold text-slate-400">
                       {t.admin.eventType}
                     </label>
-                    <select
+                    <Select
                       value={eventType}
-                      onChange={(e) => setEventType(e.target.value as EventType)}
-                      className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs font-bold text-white focus:outline-none focus:border-emerald-400"
-                    >
-                      <option value="goal">Goal (Regular)</option>
-                      <option value="penalty_goal">Goal (Penalty)</option>
-                      <option value="yellow_card">Yellow Card</option>
-                      <option value="red_card">Red Card</option>
-                      <option value="substitution">Substitution</option>
-                      <option value="own_goal">Own Goal</option>
-                    </select>
+                      onChange={(val) => setEventType(val as EventType)}
+                      options={[
+                        { value: 'goal', label: 'Goal (Regular)', badge: 'GOAL' },
+                        { value: 'penalty_goal', label: 'Goal (Penalty)', badge: 'PEN' },
+                        { value: 'yellow_card', label: 'Yellow Card', badge: 'YC' },
+                        { value: 'red_card', label: 'Red Card', badge: 'RC' },
+                        { value: 'substitution', label: 'Substitution', badge: 'SUB' },
+                        { value: 'own_goal', label: 'Own Goal', badge: 'OG' },
+                      ]}
+                    />
                   </div>
                 </div>
 
@@ -496,19 +578,18 @@ export default function AdminPage() {
                   <label className="text-xs font-semibold text-slate-400">
                     {t.admin.eventPlayer}
                   </label>
-                  <select
+                  <Select
                     value={eventPlayerId}
-                    onChange={(e) => setEventPlayerId(e.target.value)}
-                    required
-                    className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs font-bold text-white focus:outline-none focus:border-emerald-400"
-                  >
-                    <option value="">-- Choose Player --</option>
-                    {currentTeamPlayers.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        #{p.jersey_number} - {getLocalizedText(p.name, p.name_bn)} ({p.position})
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(val) => setEventPlayerId(val)}
+                    placeholder="-- Choose Player --"
+                    searchable="auto"
+                    options={currentTeamPlayers.map((p) => ({
+                      value: p.id,
+                      label: `#${p.jersey_number} - ${getLocalizedText(p.name, p.name_bn)}`,
+                      badge: p.position,
+                      avatarUrl: p.photo_url,
+                    }))}
+                  />
                 </div>
 
                 {/* Assist Player (if Goal) */}
@@ -517,20 +598,22 @@ export default function AdminPage() {
                     <label className="text-xs font-semibold text-slate-400">
                       {t.admin.assistPlayer}
                     </label>
-                    <select
+                    <Select
                       value={assistPlayerId}
-                      onChange={(e) => setAssistPlayerId(e.target.value)}
-                      className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs font-medium text-slate-300 focus:outline-none focus:border-emerald-400"
-                    >
-                      <option value="">-- None / Solo Effort --</option>
-                      {currentTeamPlayers
-                        .filter((p) => p.id !== eventPlayerId)
-                        .map((p) => (
-                          <option key={p.id} value={p.id}>
-                            #{p.jersey_number} - {getLocalizedText(p.name, p.name_bn)}
-                          </option>
-                        ))}
-                    </select>
+                      onChange={(val) => setAssistPlayerId(val)}
+                      placeholder="-- None / Solo Effort --"
+                      searchable="auto"
+                      options={[
+                        { value: '', label: '-- None / Solo Effort --' },
+                        ...currentTeamPlayers
+                          .filter((p) => p.id !== eventPlayerId)
+                          .map((p) => ({
+                            value: p.id,
+                            label: `#${p.jersey_number} - ${getLocalizedText(p.name, p.name_bn)}`,
+                            avatarUrl: p.photo_url,
+                          })),
+                      ]}
+                    />
                   </div>
                 )}
 
@@ -617,6 +700,407 @@ export default function AdminPage() {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+    </>
+  )}
+
+      {/* TAB 2: PLAYERS & LEVELING CONSOLE */}
+      {adminTab === 'players' && (
+        <div className="space-y-6 animate-in fade-in-50 duration-200">
+          {/* KPI Stat Cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800">
+              <div className="text-[11px] text-slate-400 font-bold uppercase">
+                {language === 'bn' ? 'মোট খেলোয়াড়' : 'Total Players'}
+              </div>
+              <div className="text-xl font-black text-white mt-1">{formatNumber(players.length)}</div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-slate-900/80 border border-lime-400/30">
+              <div className="text-[11px] text-lime-400 font-bold uppercase">Level A (স্টার)</div>
+              <div className="text-xl font-black text-lime-400 mt-1">
+                {formatNumber(players.filter((p) => p.level === 'A').length)}
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-slate-900/80 border border-emerald-500/30">
+              <div className="text-[11px] text-emerald-400 font-bold uppercase">Level B (অভিজ্ঞ)</div>
+              <div className="text-xl font-black text-emerald-400 mt-1">
+                {formatNumber(players.filter((p) => p.level === 'B').length)}
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-slate-900/80 border border-sky-500/30">
+              <div className="text-[11px] text-sky-400 font-bold uppercase">Level C (স্কোয়াড)</div>
+              <div className="text-xl font-black text-sky-400 mt-1">
+                {formatNumber(players.filter((p) => p.level === 'C').length)}
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-slate-900/80 border border-amber-500/30">
+              <div className="text-[11px] text-amber-400 font-bold uppercase">EXTRA (রিজার্ভ)</div>
+              <div className="text-xl font-black text-amber-400 mt-1">
+                {formatNumber(players.filter((p) => p.level === 'EXTRA').length)}
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-slate-900/80 border border-purple-500/30">
+              <div className="text-[11px] text-purple-400 font-bold uppercase">
+                {language === 'bn' ? 'ড্র পুলে অপেক্ষমাণ' : 'In Draw Pool'}
+              </div>
+              <div className="text-xl font-black text-purple-400 mt-1">
+                {formatNumber(players.filter((p) => !p.team_id).length)}
+              </div>
+            </div>
+          </div>
+
+          {/* Action & Filter Toolbar */}
+          <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[280px]">
+              {/* Search */}
+              <div className="relative flex-1 min-w-[200px]">
+                <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder={language === 'bn' ? 'নাম বা ফোন নম্বর দিয়ে খুঁজুন...' : 'Search by name or phone...'}
+                  value={playerSearch}
+                  onChange={(e) => setPlayerSearch(e.target.value)}
+                  className="w-full h-10 pl-9 pr-4 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-lime-400"
+                />
+              </div>
+
+              {/* Filter Pills */}
+              <div className="flex items-center gap-1 overflow-x-auto py-1">
+                {(['ALL', 'A', 'B', 'C', 'EXTRA', 'UNASSIGNED'] as const).map((lvl) => {
+                  const isActive = playerLevelFilter === lvl;
+                  return (
+                    <button
+                      key={lvl}
+                      onClick={() => setPlayerLevelFilter(lvl)}
+                      className={`h-8 px-2.5 rounded-lg text-xs font-bold transition-all shrink-0 ${
+                        isActive
+                          ? 'bg-lime-400 text-slate-950 font-black'
+                          : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
+                      }`}
+                    >
+                      {lvl === 'ALL'
+                        ? (language === 'bn' ? 'সকল' : 'All')
+                        : lvl === 'UNASSIGNED'
+                        ? (language === 'bn' ? 'পুলে বাকি' : 'In Pool')
+                        : `Level ${lvl}`}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Add Player Action */}
+            <button
+              onClick={() => setShowAddPlayerModal(true)}
+              className="h-10 px-4 rounded-xl bg-lime-400 hover:bg-lime-300 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-lg shadow-lime-400/20 transition-all shrink-0"
+            >
+              <UserPlus className="w-4 h-4" />
+              <span>{language === 'bn' ? 'নতুন প্লেয়ার যোগ করুন' : 'Add Player Manually'}</span>
+            </button>
+          </div>
+
+          {/* Players Roster Grid */}
+          {(() => {
+            const filtered = players.filter((p) => {
+              const matchesSearch =
+                !playerSearch ||
+                p.name.toLowerCase().includes(playerSearch.toLowerCase()) ||
+                (p.name_bn && p.name_bn.includes(playerSearch)) ||
+                (p.phone && p.phone.includes(playerSearch));
+              const matchesLevel =
+                playerLevelFilter === 'ALL'
+                  ? true
+                  : playerLevelFilter === 'UNASSIGNED'
+                  ? !p.team_id
+                  : p.level === playerLevelFilter;
+              return matchesSearch && matchesLevel;
+            });
+
+            if (filtered.length === 0) {
+              return (
+                <div className="py-16 text-center text-slate-500 rounded-3xl bg-slate-900/40 border border-slate-800">
+                  <Users className="w-10 h-10 mx-auto text-slate-600 mb-2" />
+                  <p className="text-sm font-bold text-slate-400">
+                    {language === 'bn' ? 'কোনো খেলোয়াড় খুঁজে পাওয়া যায়নি' : 'No players found matching your criteria'}
+                  </p>
+                </div>
+              );
+            }
+
+            return (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filtered.map((player) => {
+                  const playerTeam = teams.find((t) => t.id === player.team_id);
+                  const isCaptain = player.is_captain || (player as any).isCaptain;
+
+                  return (
+                    <div
+                      key={player.id}
+                      className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-slate-700 transition-colors space-y-3"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-13 h-13 rounded-2xl overflow-hidden bg-slate-800 border border-slate-700 shrink-0">
+                          <img
+                            src={player.photo_url || (player as any).photoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80'}
+                            alt={player.name}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              (e.currentTarget as HTMLImageElement).src =
+                                'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80';
+                            }}
+                          />
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <h4 className="text-sm font-black text-white truncate">
+                              {getLocalizedText(player.name, player.name_bn || (player as any).nameBn)}
+                            </h4>
+                            {isCaptain && (
+                              <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                                C
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[11px] text-slate-400 truncate">{player.phone || 'No phone'}</div>
+                          <div className="flex items-center gap-1 mt-1">
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-slate-800 text-slate-300">
+                              {player.position}
+                            </span>
+                            {player.jersey_number && (
+                              <span className="text-[10px] text-slate-500 font-mono">
+                                #{formatNumber(player.jersey_number)}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Level Selection Bar */}
+                      <div className="pt-2 border-t border-slate-800/80">
+                        <div className="text-[10px] uppercase font-bold text-slate-400 mb-1.5 flex items-center justify-between">
+                          <span>{language === 'bn' ? 'লেভেল নির্ধারণ করুন:' : 'Assign Level:'}</span>
+                          <span className="text-lime-400 font-black">Level {player.level || 'A'}</span>
+                        </div>
+
+                        <div className="grid grid-cols-4 gap-1.5">
+                          {(['A', 'B', 'C', 'EXTRA'] as const).map((lvl) => {
+                            const isSelected = player.level === lvl;
+                            return (
+                              <button
+                                key={lvl}
+                                onClick={async () => {
+                                  await updatePlayerLevel(player.id, lvl);
+                                  showToast(
+                                    language === 'bn'
+                                      ? `${player.name} এর লেভেল ${lvl} এ আপডেট করা হয়েছে`
+                                      : `${player.name} assigned to Level ${lvl}`
+                                  );
+                                }}
+                                className={`h-8 rounded-xl text-xs font-black transition-all ${
+                                  isSelected
+                                    ? lvl === 'A'
+                                      ? 'bg-lime-400 text-slate-950 shadow-md shadow-lime-400/20'
+                                      : lvl === 'B'
+                                      ? 'bg-emerald-400 text-slate-950 shadow-md shadow-emerald-400/20'
+                                      : lvl === 'C'
+                                      ? 'bg-sky-400 text-slate-950 shadow-md shadow-sky-400/20'
+                                      : 'bg-amber-400 text-slate-950 shadow-md shadow-amber-400/20'
+                                    : 'bg-slate-950/80 text-slate-400 hover:text-white border border-slate-800/80 hover:border-slate-700'
+                                }`}
+                              >
+                                {lvl}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Draft Team Info */}
+                      <div className="pt-2 border-t border-slate-800/60 flex items-center justify-between text-[11px]">
+                        <span className="text-slate-400">{language === 'bn' ? 'বর্তমান দল:' : 'Team:'}</span>
+                        {playerTeam ? (
+                          <Link
+                            href={`/teams/${playerTeam.id}`}
+                            className="text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1 group"
+                          >
+                            <img src={playerTeam.logo_url} alt="" className="w-3.5 h-3.5 object-contain" />
+                            <span className="truncate max-w-[130px]">
+                              {getLocalizedText(playerTeam.name, playerTeam.name_bn)}
+                            </span>
+                            <ExternalLink className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                          </Link>
+                        ) : (
+                          <span className="text-amber-400/90 font-medium">
+                            {language === 'bn' ? 'ড্র পুলে অপেক্ষমাণ' : 'In Draw Pool'}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* ADD PLAYER MODAL */}
+      {showAddPlayerModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="w-full max-w-md p-6 sm:p-7 rounded-3xl bg-slate-900 border border-slate-800 shadow-2xl space-y-5 animate-in zoom-in-95">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <h3 className="text-lg font-black text-white flex items-center gap-2">
+                <UserPlus className="w-5 h-5 text-lime-400" />
+                <span>{language === 'bn' ? 'নতুন খেলোয়াড় যোগ করুন' : 'Add New Player'}</span>
+              </h3>
+              <button
+                onClick={() => setShowAddPlayerModal(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!newPlayerName.trim() || !newPlayerPhone.trim()) return;
+
+                await addPlayer({
+                  name: newPlayerName.trim(),
+                  nameBn: newPlayerNameBn.trim() || undefined,
+                  phone: newPlayerPhone.trim(),
+                  position: newPlayerPosition,
+                  level: newPlayerLevel,
+                  photoUrl: newPlayerPhoto.trim() || undefined,
+                });
+
+                showToast(
+                  language === 'bn'
+                    ? `${newPlayerName} সফলভাবে যোগ করা হয়েছে`
+                    : `${newPlayerName} successfully added`
+                );
+
+                setNewPlayerName('');
+                setNewPlayerNameBn('');
+                setNewPlayerPhone('');
+                setNewPlayerPhoto('');
+                setShowAddPlayerModal(false);
+              }}
+              className="space-y-4"
+            >
+              <div>
+                <label className="block text-xs font-bold uppercase text-slate-400 mb-1">
+                  {language === 'bn' ? 'খেলোয়াড়ের নাম (ইংরেজিতে) *' : 'Name (English) *'}
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Shakib Al Hasan"
+                  value={newPlayerName}
+                  onChange={(e) => setNewPlayerName(e.target.value)}
+                  className="w-full h-10 px-3.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-lime-400"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase text-slate-400 mb-1">
+                  {language === 'bn' ? 'খেলোয়াড়ের নাম (বাংলায়)' : 'Name (Bangla)'}
+                </label>
+                <input
+                  type="text"
+                  placeholder="উদাঃ সাকিব আল হাসান"
+                  value={newPlayerNameBn}
+                  onChange={(e) => setNewPlayerNameBn(e.target.value)}
+                  className="w-full h-10 px-3.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-lime-400"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase text-slate-400 mb-1">
+                  {language === 'bn' ? 'মোবাইল নম্বর *' : 'Phone Number *'}
+                </label>
+                <input
+                  type="tel"
+                  required
+                  placeholder="01700000000"
+                  value={newPlayerPhone}
+                  onChange={(e) => setNewPlayerPhone(e.target.value)}
+                  className="w-full h-10 px-3.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-lime-400"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold uppercase text-slate-400 mb-1">
+                    {language === 'bn' ? 'পজিশন' : 'Position'}
+                  </label>
+                  <select
+                    value={newPlayerPosition}
+                    onChange={(e) => setNewPlayerPosition(e.target.value as PlayerPosition)}
+                    className="w-full h-10 px-3 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-lime-400"
+                  >
+                    <option value="FWD">FWD (Forward)</option>
+                    <option value="MID">MID (Midfielder)</option>
+                    <option value="DEF">DEF (Defender)</option>
+                    <option value="GK">GK (Goalkeeper)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase text-slate-400 mb-1">
+                    {language === 'bn' ? 'প্রাথমিক লেভেল' : 'Initial Level'}
+                  </label>
+                  <select
+                    value={newPlayerLevel}
+                    onChange={(e) => setNewPlayerLevel(e.target.value as PlayerLevel)}
+                    className="w-full h-10 px-3 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-lime-400"
+                  >
+                    <option value="A">Level A (Star)</option>
+                    <option value="B">Level B (Core)</option>
+                    <option value="C">Level C (Squad)</option>
+                    <option value="EXTRA">EXTRA (Reserve)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase text-slate-400 mb-1">
+                  {language === 'bn' ? 'ছবির লিংক (ঐচ্ছিক)' : 'Photo URL (Optional)'}
+                </label>
+                <input
+                  type="url"
+                  placeholder="https://..."
+                  value={newPlayerPhoto}
+                  onChange={(e) => setNewPlayerPhoto(e.target.value)}
+                  className="w-full h-10 px-3.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-lime-400"
+                />
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAddPlayerModal(false)}
+                  className="h-10 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold"
+                >
+                  {language === 'bn' ? 'বাতিল' : 'Cancel'}
+                </button>
+                <button
+                  type="submit"
+                  className="h-10 px-5 rounded-xl bg-lime-400 hover:bg-lime-300 text-slate-950 text-xs font-black shadow-lg shadow-lime-400/20"
+                >
+                  {language === 'bn' ? 'প্লেয়ার যুক্ত করুন' : 'Save Player'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

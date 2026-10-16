@@ -76,8 +76,88 @@ export function StandingsTable({ compact = false, initialTab = 'groupA' }: Stand
         )}
       </div>
 
-      {/* Table */}
-      <div className="overflow-x-auto">
+      {/* MOBILE CARD VIEW (<=640px, no horizontal scroll) */}
+      <div className="block sm:hidden divide-y divide-slate-800/60 p-2 space-y-2">
+        {currentRows.map((row, index) => {
+          const isQualified = activeTab !== 'overall' && index < 2;
+
+          return (
+            <div
+              key={row.team.id}
+              className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800/80 flex flex-col gap-2.5"
+            >
+              <div className="flex items-center justify-between">
+                <Link
+                  href={`/teams/${row.team.id}`}
+                  className="flex items-center gap-2.5 min-w-0"
+                >
+                  <span
+                    className={`w-6 h-6 rounded-md text-xs font-bold flex items-center justify-center shrink-0 ${
+                      isQualified
+                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
+                        : 'bg-slate-800 text-slate-400'
+                    }`}
+                  >
+                    {formatNumber(index + 1)}
+                  </span>
+                  <div
+                    className="w-7 h-7 rounded-lg p-0.5 flex items-center justify-center border shrink-0"
+                    style={{
+                      borderColor: `${row.team.primary_color}40`,
+                      backgroundColor: `${row.team.primary_color}15`,
+                    }}
+                  >
+                    <img
+                      src={row.team.logo_url}
+                      alt={row.team.name}
+                      className="w-full h-full object-cover rounded"
+                    />
+                  </div>
+                  <span className="font-bold text-white text-sm truncate">
+                    {getLocalizedText(row.team.name, row.team.name_bn)}
+                  </span>
+                </Link>
+
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className="text-[10px] text-slate-400 uppercase font-semibold">PTS</span>
+                  <span className="text-lg font-black font-mono text-emerald-400">
+                    {formatNumber(row.points)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Stats Grid */}
+              <div className="grid grid-cols-5 gap-1 py-1.5 px-2 rounded-lg bg-slate-950/60 text-center text-xs font-mono">
+                <div>
+                  <span className="block text-[10px] text-slate-500 font-sans">{t.standings.played}</span>
+                  <span className="font-semibold text-slate-200">{formatNumber(row.played)}</span>
+                </div>
+                <div>
+                  <span className="block text-[10px] text-slate-500 font-sans">{t.standings.won}</span>
+                  <span className="font-semibold text-emerald-400">{formatNumber(row.won)}</span>
+                </div>
+                <div>
+                  <span className="block text-[10px] text-slate-500 font-sans">{t.standings.drawn}</span>
+                  <span className="font-semibold text-amber-400">{formatNumber(row.drawn)}</span>
+                </div>
+                <div>
+                  <span className="block text-[10px] text-slate-500 font-sans">{t.standings.lost}</span>
+                  <span className="font-semibold text-red-400">{formatNumber(row.lost)}</span>
+                </div>
+                <div>
+                  <span className="block text-[10px] text-slate-500 font-sans">{t.standings.gd}</span>
+                  <span className="font-semibold text-slate-300">
+                    {row.gd > 0 ? `+${formatNumber(row.gd)}` : formatNumber(row.gd)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* DESKTOP TABLE VIEW (sm:block) */}
+      <div className="hidden sm:block overflow-x-auto">
         <table className="w-full text-left text-xs sm:text-sm">
           <thead className="bg-slate-950/60 text-slate-400 font-semibold uppercase text-[11px] tracking-wider border-b border-slate-800">
             <tr>

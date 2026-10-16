@@ -11,6 +11,8 @@ import {
   Tournament,
   MatchStatus,
   EventType,
+  PlayerLevel,
+  PlayerPosition,
 } from '../types';
 import {
   demoTournament,
@@ -22,6 +24,9 @@ import {
   getHydratedMatches,
 } from './demoData';
 import { supabase, isSupabaseConfigured } from '../supabase/client';
+import { realtimeClient } from '@/shared/lib/realtimeClient';
+import { matchesApi } from '@/features/matches/api/matchesApi';
+import { playersApi } from '@/features/players/api/playersApi';
 
 interface GoalAlert {
   id: string;
@@ -68,6 +73,15 @@ interface TournamentStoreType {
   logoutAdmin: () => void;
   getMatchById: (id: string) => Match | undefined;
   getTeamById: (id: string) => Team | undefined;
+  updatePlayerLevel: (playerId: string, level: PlayerLevel, extraCategoryTag?: string | null) => Promise<void>;
+  addPlayer: (playerData: {
+    name: string;
+    nameBn?: string;
+    phone: string;
+    position: PlayerPosition;
+    level: PlayerLevel;
+    photoUrl?: string;
+  }) => Promise<void>;
 }
 
 const TournamentStoreContext = createContext<TournamentStoreType | undefined>(undefined);
@@ -180,6 +194,45 @@ export function TournamentStoreProvider({ children }: { children: React.ReactNod
     };
   }, [teams, players]);
 
+  // Realtime Backend Sync (WebSocket / SSE)
+  useEffect(() => {
+    const unbindMatch = realtimeClient.on('MATCH_UPDATE', (payload: any) => {
+      if (payload?.match) {
+        setRawMatches((prev) =>
+          prev.map((m) => (m.id === payload.match.id ? { ...m, ...payload.match } : m))
+        );
+      }
+    });
+
+    const unbindEventAdd = realtimeClient.on('EVENT_ADD', (payload: any) => {
+      if (payload?.event) {
+        setEvents((prev) => [payload.event, ...prev]);
+        if (payload.alert) {
+          triggerGoalEffect(payload.alert);
+        }
+      }
+    });
+
+    const unbindEventDel = realtimeClient.on('EVENT_DELETE', (payload: any) => {
+      if (payload?.eventId) {
+        setEvents((prev) => prev.filter((e) => e.id !== payload.eventId));
+      }
+    });
+
+    const unbindStatus = realtimeClient.on('STATUS_CHANGE', (status: any) => {
+      if (status?.connected !== undefined) {
+        setIsRealtimeConnected(status.connected);
+      }
+    });
+
+    return () => {
+      unbindMatch();
+      unbindEventAdd();
+      unbindEventDel();
+      unbindStatus();
+    };
+  }, []);
+
   // Live match clock simulation for running matches
   useEffect(() => {
     const interval = setInterval(() => {
@@ -255,6 +308,20 @@ export function TournamentStoreProvider({ children }: { children: React.ReactNod
         broadcastSync('MATCH_UPDATE', { matches: next });
         return next;
       });
+
+      // Dispatch to Backend REST API
+      try {
+        await matchesApi.updateScore({
+          matchId,
+          homeScore,
+          awayScore,
+          status,
+          currentMinute,
+          isClockRunning,
+        });
+      } catch {
+        // Resilient fallback when backend is offline
+      }
 
       // Update Supabase if configured
       if (isSupabaseConfigured() && supabase) {
@@ -346,6 +413,21 @@ export function TournamentStoreProvider({ children }: { children: React.ReactNod
 
       broadcastSync('EVENT_ADD', { events: updatedEvents, alert: goalAlert });
 
+      // Dispatch to Backend REST API
+      try {
+        await matchesApi.recordEvent({
+          matchId: newEvent.match_id,
+          teamId: newEvent.team_id,
+          playerId: newEvent.player_id,
+          assistPlayerId: newEvent.assist_player_id,
+          eventType: newEvent.event_type,
+          minute: newEvent.minute,
+          description: newEvent.description,
+        });
+      } catch {
+        // Resilient fallback
+      }
+
       // If Supabase is connected
       if (isSupabaseConfigured() && supabase) {
         try {
@@ -368,10 +450,20 @@ export function TournamentStoreProvider({ children }: { children: React.ReactNod
 
   const deleteMatchEvent = useCallback(
     async (eventId: string) => {
+      const targetEvent = events.find((e) => e.id === eventId);
       const updatedEvents = events.filter((e) => e.id !== eventId);
       setEvents(updatedEvents);
       localStorage.setItem(LOCAL_STORAGE_KEY_EVENTS, JSON.stringify(updatedEvents));
       broadcastSync('EVENT_DELETE', { events: updatedEvents });
+
+      // Dispatch to Backend REST API
+      if (targetEvent) {
+        try {
+          await matchesApi.deleteEvent(targetEvent.match_id, eventId);
+        } catch {
+          // Resilient fallback
+        }
+      }
 
       if (isSupabaseConfigured() && supabase) {
         try {
@@ -437,6 +529,69 @@ export function TournamentStoreProvider({ children }: { children: React.ReactNod
     [teams]
   );
 
+  const updatePlayerLevel = useCallback(
+    async (playerId: string, level: PlayerLevel, extraCategoryTag?: string | null) => {
+      setPlayers((prev) =>
+        prev.map((p) => (p.id === playerId ? { ...p, level, extra_category_tag: extraCategoryTag || null } : p))
+      );
+      try {
+        await playersApi.assignLevel(playerId, level, extraCategoryTag);
+      } catch {
+        // Resilient fallback
+      }
+    },
+    []
+  );
+
+  const addPlayer = useCallback(
+    async (playerData: {
+      name: string;
+      nameBn?: string;
+      phone: string;
+      position: PlayerPosition;
+      level: PlayerLevel;
+      photoUrl?: string;
+    }) => {
+      try {
+        const created = await playersApi.registerPlayer({
+          name: playerData.name,
+          nameBn: playerData.nameBn,
+          phone: playerData.phone,
+          position: playerData.position,
+          photoUrl: playerData.photoUrl,
+        });
+        await playersApi.assignLevel(created.id, playerData.level);
+        setPlayers((prev) => [
+          {
+            ...created,
+            level: playerData.level,
+          },
+          ...prev,
+        ]);
+      } catch {
+        // Local memory fallback
+        const newPlayer: Player = {
+          id: `ply-${Date.now()}`,
+          team_id: '',
+          name: playerData.name,
+          name_bn: playerData.nameBn || playerData.name,
+          phone: playerData.phone,
+          jersey_number: Math.floor(Math.random() * 30) + 1,
+          position: playerData.position,
+          photo_url: playerData.photoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
+          nationality: 'Bangladesh',
+          goals_count: 0,
+          assists_count: 0,
+          yellow_cards: 0,
+          red_cards: 0,
+          level: playerData.level,
+        };
+        setPlayers((prev) => [newPlayer, ...prev]);
+      }
+    },
+    []
+  );
+
   return (
     <TournamentStoreContext.Provider
       value={{
@@ -459,6 +614,8 @@ export function TournamentStoreProvider({ children }: { children: React.ReactNod
         logoutAdmin,
         getMatchById,
         getTeamById,
+        updatePlayerLevel,
+        addPlayer,
       }}
     >
       {children}

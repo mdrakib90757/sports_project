@@ -18,6 +18,8 @@ export type EventType =
   | 'var_decision';
 
 export type PlayerPosition = 'GK' | 'DEF' | 'MID' | 'FWD';
+export type PlayerLevel = 'A' | 'B' | 'C' | 'EXTRA';
+export type SquadRole = 'MAIN' | 'EXTRA';
 
 export interface Tournament {
   id: string;
@@ -55,6 +57,7 @@ export interface Player {
   jersey_number: number;
   position: PlayerPosition;
   photo_url: string;
+  phone?: string;
   is_captain?: boolean;
   nationality: string;
   nationality_bn?: string;
@@ -63,6 +66,9 @@ export interface Player {
   yellow_cards: number;
   red_cards: number;
   appearances?: number;
+  level?: PlayerLevel;
+  extra_category_tag?: string | null;
+  squad_role?: SquadRole;
 }
 
 export interface MatchEvent {

@@ -1,0 +1,35 @@
+export const tokens = {
+  colors: {
+    bgDark: '#080c14',
+    bgCard: '#0f172a',
+    bgCardHover: '#1e293b',
+    border: 'rgba(255, 255, 255, 0.08)',
+    borderActive: 'rgba(198, 255, 61, 0.4)',
+    signalLime: '#C6FF3D',
+    turfGreen: '#10b981',
+    turfGreenDark: '#059669',
+    liveRed: '#ef4444',
+    liveRedDark: '#dc2626',
+    cyan: '#06b6d4',
+    amber: '#f59e0b',
+  },
+  radii: {
+    sm: '8px',
+    md: '12px',
+    lg: '16px',
+    xl: '24px',
+    full: '9999px',
+  },
+  transitions: {
+    fast: '150ms cubic-bezier(0.16, 1, 0.3, 1)',
+    normal: '250ms cubic-bezier(0.16, 1, 0.3, 1)',
+    spring: '350ms cubic-bezier(0.34, 1.56, 0.64, 1)',
+  },
+  zIndex: {
+    header: 40,
+    popover: 50,
+    modal: 60,
+    progressBar: 100,
+    toast: 110,
+  },
+};
